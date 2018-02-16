@@ -1,6 +1,7 @@
 var pako;
 var ffmpeg;
 var tileset;
+var noexit = false;
 
 var colors = [
 	[
@@ -25,8 +26,34 @@ var colors = [
 	]
 ];
 
+var realCalledRun = null;
+
+var Module = {
+	'thisProgram': 'ffmpeg',
+	'stdin': function() { return null; },
+	'printErr': function() {
+		var args = ['[' + CMVInputDevice.name + '] '].concat([].slice.call(arguments, 0));
+		console.log.apply(console, args);
+	}
+};
+
+Object.defineProperty(Module, 'calledRun', {
+	get: function() {
+		// return true the first time to prevent the initial run.
+		// as of emscripten 1.37.33, noInitialRun is broken.
+		if (realCalledRun === null) {
+			realCalledRun = false;
+			return true;
+		}
+		return realCalledRun;
+	},
+	set: function(value) {
+		realCalledRun = value;
+	}
+});
+
 function loaded() {
-	if (pako && ffmpeg && tileset) {
+	if (pako && Module['run'] && Module['asm'] && Module['memoryInitializerRequest'] && tileset) {
 		postMessage({t: 'loaded'});
 	}
 }
@@ -39,37 +66,28 @@ self.onmessage = function(e) {
 		loaded();
 		break;
 	case 'convert':
-		var reader = new FileReaderSync();
-		convert(msg.n, new Uint8Array(reader.readAsArrayBuffer(msg.d)));
+		convert(msg.n, msg.d);
 		break;
 	default:
 		debugger;
 	}
 };
 
-self.exports = {};
-self.module = {};
+var xhr = new XMLHttpRequest();
+xhr.open('GET', 'ffmpeg-mp4.js.mem', true);
+xhr.responseType = 'arraybuffer';
+xhr.onload = function() {
+	Module['memoryInitializerRequest'] = xhr;
+	loaded();
+};
+xhr.send();
 
-Object.defineProperty(self.module, 'exports', {
-	set: function(value) {
-		if (typeof value === 'function') {
-			ffmpeg = value;
-		} else {
-			pako = value;
-		}
+importScripts('pako_inflate.min.js', 'ffmpeg-mp4.asm.js', 'ffmpeg-mp4.js');
 
-		if (ffmpeg && pako) {
-			delete self.exports;
-			delete self.module;
-			loaded();
-		}
-	}
-});
+var reader = new FileReaderSync();
 
-importScripts('pako_inflate.min.js', 'ffmpeg-mp4.js');
-
-function Decoder(bytes) {
-	this.file = bytes;
+function Decoder(blob) {
+	this.file = blob;
 	this.fileOffset = 0;
 	this.chunk = null;
 	this.chunkOffset = 0;
@@ -79,28 +97,28 @@ function Decoder(bytes) {
 }
 
 Decoder.prototype.rawWord = function() {
-	if (this.fileOffset + 4 > this.file.length) {
+	if (this.fileOffset + 4 > this.file.size) {
 		throw new Error('unexpected end of file');
 	}
+	var slice = this.file.slice(this.fileOffset, this.fileOffset + 4);
 	this.fileOffset += 4;
-	return this.file[this.fileOffset - 4] |
-		(this.file[this.fileOffset - 3] << 8) |
-		(this.file[this.fileOffset - 2] << 16) |
-		(this.file[this.fileOffset - 1] << 24);
+	return new Uint32Array(reader.readAsArrayBuffer(slice))[0];
 };
 
 Decoder.prototype.rawString50 = function() {
-	if (this.fileOffset + 50 > this.file.length) {
+	if (this.fileOffset + 50 > this.file.size) {
 		throw new Error('unexpected end of file');
 	}
+	var slice = this.file.slice(this.fileOffset, this.fileOffset + 50);
+	var raw = new Uint8Array(reader.readAsArrayBuffer(slice));
+	this.fileOffset += 50;
 	var chars = [];
 	for (var i = 0; i < 50; i++) {
-		if (!this.file[this.fileOffset + i]) {
+		if (!raw[i]) {
 			break;
 		}
-		chars.push(this.file[this.fileOffset + i]);
+		chars.push(raw[i]);
 	}
-	this.fileOffset += 50;
 	return String.fromCharCode.apply(String, chars);
 };
 
@@ -138,14 +156,15 @@ Decoder.prototype.readHeader = function() {
 };
 
 Decoder.prototype.nextChunk = function() {
-	if (this.fileOffset === this.file.length) {
+	if (this.fileOffset === this.file.size) {
 		return false;
 	}
 	var size = this.rawWord();
-	if (this.fileOffset + size > this.file.length) {
+	if (this.fileOffset + size > this.file.size) {
 		throw new Error('unexpected end of file');
 	}
-	this.chunk = pako.inflate(this.file.subarray(this.fileOffset, this.fileOffset + size));
+	var slice = this.file.slice(this.fileOffset, this.fileOffset + size);
+	this.chunk = pako.inflate(new Uint8Array(reader.readAsArrayBuffer(slice)));
 	this.fileOffset += size;
 	this.lastChunkSize = size;
 	if (this.chunk.length === 0) {
@@ -199,8 +218,11 @@ function TileSet(width, height, data) {
 	}
 }
 
-function renderFrame(decoder, frame) {
-	var data = new Uint8ClampedArray(decoder.columns * decoder.rows * tileset.width * tileset.height * 3);
+function renderFrame(data, decoder, frame) {
+	var length = decoder.columns * decoder.rows * tileset.width * tileset.height * 3;
+	if (!data || data.length !== length) {
+		data = new Uint8ClampedArray(length);
+	}
 
 	for (var tx = 0; tx < decoder.columns; tx++) {
 		var off1 = tx * decoder.rows;
@@ -232,100 +254,239 @@ function renderFrame(decoder, frame) {
 	return data;
 }
 
-function convert(name, data) {
-	try {
-		doConvert(name, new Decoder(data));
-	} catch (err) {
+function fail(err) {
+	if (err && !fail.err) {
+		fail.err = err;
+
 		postMessage({
 			t: 'error',
-			n: name,
+			n: CMVInputDevice.name,
 			e: err.message,
 			s: err.stack
 		});
+
 		close();
 	}
+	return fail.err;
 }
+fail.err = null;
 
-function doConvert(name, decoder) {
-	var frame = 1;
-	var buffer = null;
-	var offset = 0;
-	var fail = null;
+var CMVInputDevice = {
+	name: '???.cmv',
+	decoder: null,
+	frame: 1,
+	buffer: null,
+	offset: 0,
+	device: {
+		open: function(stream) {
+			stream.seekable = false;
+		},
+		read: function(stream, buffer, offset, length, pos) {
+			if (!CMVInputDevice.refill()) {
+				return 0;
+			}
 
-	function stdin() {
-		if (fail) {
-			return null;
+			var bytesRead = Math.min(length, CMVInputDevice.buffer.length - CMVInputDevice.offset);
+			buffer.set(CMVInputDevice.buffer.subarray(CMVInputDevice.offset, CMVInputDevice.offset + bytesRead), offset);
+			CMVInputDevice.offset += bytesRead;
+			stream.node.timestamp = Date.now();
+			return bytesRead;
+		}
+	},
+	refill: function() {
+		if (fail()) {
+			return false;
+		}
+
+		var decoder = CMVInputDevice.decoder;
+		var buffer = CMVInputDevice.buffer;
+
+		if (buffer && buffer.length !== CMVInputDevice.offset) {
+			return true;
 		}
 
 		try {
-			if (buffer === null || buffer.length === offset) {
-				if (decoder.nextFrame()) {
-					buffer = renderFrame(decoder, decoder.frame);
-					offset = 0;
-
-					postMessage({
-						t: 'progress',
-						n: name,
-						f: frame,
-						hs: decoder.headerSize,
-						co: decoder.chunkOffset,
-						cs: decoder.chunk.length,
-						ls: decoder.lastChunkSize,
-						fo: decoder.fileOffset,
-						fs: decoder.file.length
-					});
-					frame++;
-				} else {
-					return null;
-				}
+			if (!decoder.nextFrame()) {
+				return false;
 			}
 
-			return buffer[offset++];
+			CMVInputDevice.buffer = renderFrame(buffer, decoder, decoder.frame);
+			CMVInputDevice.offset = 0;
 		} catch (err) {
-			fail = err;
+			fail(err);
 
-			postMessage({
-				t: 'error',
-				n: name,
-				e: err.message,
-				s: err.stack
-			});
-			close();
+			return false;
+		}
 
-			return null;
+		postMessage({
+			t: 'progress',
+			n: CMVInputDevice.name,
+			f: CMVInputDevice.frame,
+			hs: decoder.headerSize,
+			co: decoder.chunkOffset,
+			cs: decoder.chunk.length,
+			ls: decoder.lastChunkSize,
+			fo: decoder.fileOffset,
+			fs: decoder.file.size
+		});
+
+		CMVInputDevice.frame++;
+
+		return true;
+	}
+};
+
+var MP4OutputDevice = {
+	blob: new Blob(),
+	buffer: new Uint8Array(1 << 16),
+	start: 0,
+	offset: 0,
+	device: {
+		flush: function(stream) {
+			if (MP4OutputDevice.offset === 0) {
+				return;
+			}
+
+			var pos = MP4OutputDevice.start;
+			var length = MP4OutputDevice.offset;
+			var blob = MP4OutputDevice.blob;
+			var data = MP4OutputDevice.buffer.subarray(0, length);
+			if (blob.size === pos) {
+				blob = new Blob([blob, data]);
+			} else if (blob.size < pos) {
+				var padding = new Uint8Array(pos - blob.size);
+				blob = new Blob([blob, padding, data]);
+			} else if (blob.size <= pos + length) {
+				blob = new Blob([blob.slice(0, pos), data]);
+			} else {
+				blob = new Blob([blob.slice(0, pos), data, blob.slice(pos + length)]);
+			}
+			MP4OutputDevice.blob = blob;
+			MP4OutputDevice.offset = 0;
+		},
+		llseek: function(stream, offset, whence) {
+			MP4OutputDevice.device.flush(stream);
+
+			if (whence === 1) {
+				offset += stream.position;
+			} else if (whence === 2) {
+				offset += MP4OutputDevice.blob.size;
+			}
+			if (offset < 0) {
+				throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+			}
+			return offset;
+		},
+		read: function(stream, buffer, offset, length, pos) {
+			var bytesRead = Math.min(length, Math.max(MP4OutputDevice.blob.size - pos, MP4OutputDevice.offset ? MP4OutputDevice.start + MP4OutputDevice.offset - pos : 0));
+			if (!bytesRead) {
+				return 0;
+			}
+
+			MP4OutputDevice.device.flush(stream);
+
+			var slice = MP4OutputDevice.blob.slice(pos, pos + bytesRead);
+			var data = reader.readAsArrayBuffer(slice);
+			buffer.set(new Uint8Array(data), offset);
+			stream.node.timestamp = Date.now();
+			return slice.size;
+		},
+		write: function(stream, buffer, offset, length, pos) {
+			if (!length) {
+				return 0;
+			}
+
+			var remaining = length;
+			while (remaining) {
+				if (MP4OutputDevice.offset === 0) {
+					MP4OutputDevice.start = pos;
+				}
+				var added = Math.min(MP4OutputDevice.buffer.length - MP4OutputDevice.offset, remaining);
+				MP4OutputDevice.offset += added;
+				MP4OutputDevice.buffer.set(buffer.subarray(offset, offset + added), 0);
+				if (MP4OutputDevice.offset === MP4OutputDevice.buffer.length) {
+					MP4OutputDevice.device.flush(stream);
+				}
+				remaining -= added;
+				offset += added;
+				pos += added;
+			}
+
+			stream.node.timestamp = Date.now();
+			return length;
 		}
 	}
+};
 
-	var size = (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height);
-	var result = ffmpeg({
-		arguments: [
-			'-r', '50',
-			'-s', size,
-			'-f', 'rawvideo',
-			'-pix_fmt', 'rgb24',
-			'-i', '-',
-			'-c:v', 'libx264',
-			'-crf', '0',
-			'-pix_fmt', 'yuv444p',
-			name.replace(/\.cmv$/, '') + '.mp4'
-		],
-		stdin: stdin
+function convert(name, blob) {
+	var decoder;
+	try {
+		decoder = new Decoder(blob);
+	} catch (err) {
+		fail(err);
+	}
+	CMVInputDevice.name = name;
+	CMVInputDevice.decoder = decoder;
+
+	var mp4Name = name.replace(/\.cmv$/, '') + '.mp4';
+
+	Module['preRun'].push(function() {
+		var work = FS.mkdir('/work');
+		FS.chdir('/work');
+
+		if (!FS.createDevice.major) {
+			FS.createDevice.major = 64;
+		}
+
+		var indev = FS.makedev(FS.createDevice.major++, 0);
+		FS.registerDevice(indev, CMVInputDevice.device);
+		FS.mkdev('/work/' + name, FS.getMode(true, false), indev);
+
+		var outdev = FS.makedev(FS.createDevice.major++, 0);
+		FS.registerDevice(outdev, MP4OutputDevice.device);
+		FS.mkdev('/work/' + mp4Name, FS.getMode(true, true), outdev);
 	});
 
-	if (fail) {
-		throw fail;
-	}
+	Module['postRun'].push(function() {
+		if (fail()) {
+			return;
+		}
 
-	if (result.MEMFS.length !== 1 || !result.MEMFS[0].data.length) {
-		throw new Error('conversion failed! check console for details.');
-	}
+		postMessage({
+			t: 'mp4',
+			n: name,
+			m: mp4Name,
+			d: new Blob([MP4OutputDevice.blob], {type: 'video/mp4'})
+		});
+
+		if (!noexit) {
+			close();
+		}
+	});
 
 	postMessage({
-		t: 'mp4',
+		t: 'progress',
 		n: name,
-		m: result.MEMFS[0].name,
-		d: result.MEMFS[0].data
+		f: 0,
+		hs: decoder.headerSize,
+		co: 0,
+		cs: 1,
+		ls: 1,
+		fo: decoder.headerSize + 1,
+		fs: decoder.file.size
 	});
 
-	close();
+	var size = (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height);
+	Module['run']([
+		'-r', '50',
+		'-s', size,
+		'-f', 'rawvideo',
+		'-pix_fmt', 'rgb24',
+		'-i', name,
+		'-c:v', 'libx264',
+		'-crf', '0',
+		'-pix_fmt', 'yuv444p',
+		'-movflags', '+faststart',
+		'-y', mp4Name
+	]);
 }

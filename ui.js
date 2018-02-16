@@ -28,18 +28,17 @@ function workerMessage(e) {
 		gtag('event', 'cmv-error');
 		var span = document.createElement('span');
 		span.className = 'error';
-		span.innerText = msg.m;
+		span.innerText = msg.e;
 		span.setAttribute('data-stack-trace', msg.s);
 		files[msg.n].p.parentNode.replaceChild(span, files[msg.n].p);
 		delete files[msg.n];
 		break;
 	case 'mp4':
 		gtag('event', 'cmv-finished');
-		var blob = new Blob([msg.d], {type: 'video/mp4'});
 		var a = document.createElement('a');
 		a.textContent = msg.m;
 		a.download = msg.m;
-		a.href = URL.createObjectURL(blob);
+		a.href = URL.createObjectURL(msg.d);
 		files[msg.n].p.parentNode.replaceChild(a, files[msg.n].p);
 		delete files[msg.n];
 		break;
@@ -157,5 +156,11 @@ document.addEventListener('dragover', function(e) {
 document.addEventListener('dragleave', function() {
 	document.body.parentNode.classList.remove('dragdrop');
 });
+
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', function() {
+		navigator.serviceWorker.register('/cmv2mp4/sw.js');
+	});
+}
 
 })();
