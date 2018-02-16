@@ -38,7 +38,6 @@ a {
 	font-size: 0.75em;
 	max-width: 600px;
 	margin: 5em auto 0;
-	text-align: justify;
 }
 
 #faq h1, #faq h2 {
@@ -48,4 +47,5 @@ a {
 
 #faq li, #faq p {
 	line-height: 1.5;
+	text-align: justify;
 }

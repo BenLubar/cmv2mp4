@@ -18,7 +18,15 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "index.html",
-    "revision": "a23b78baa838fd96b533c0ec04844642"
+    "revision": "bbfdfc1e34e64d33efacf447594c02a5"
+  },
+  {
+    "url": "manifest-icon-192.png",
+    "revision": "3eca0024803c1eb2cebb4b1a3f6ddcb6"
+  },
+  {
+    "url": "manifest.json",
+    "revision": "68692e90b71227a5580648588fc79420"
   },
   {
     "url": "pako_inflate.min.js",
@@ -26,7 +34,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "style.css",
-    "revision": "b184564d023c2ce174f30de8443721d7"
+    "revision": "e31c48a5e09f0467b06916f76a8a5fd0"
   },
   {
     "url": "ui.js",

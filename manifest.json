@@ -1,0 +1,15 @@
+{
+	"short_name": "CMV to MP4",
+	"name": "Dwarf Fortress CMV to MP4 converter",
+	"icons": [
+		{
+			"src": "manifest-icon-192.png",
+			"type": "image/png",
+			"sizes": "192x192"
+		}
+	],
+	"start_url": "https://benlubar.github.io/cmv2mp4/",
+	"background_color": "#333",
+	"theme_color": "#333",
+	"display": "standalone"
+}

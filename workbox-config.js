@@ -1,6 +1,6 @@
 module.exports = {
 	globDirectory: './',
-	globPatterns: ['*.{js,mem,html,css,png}'],
+	globPatterns: ['*.{js,mem,html,css,png,json}'],
 	globIgnores: ['sw.js', 'sw.src.js', 'workbox-config.js'],
 	swDest: 'sw.js',
 	swSrc: 'sw.src.js',
