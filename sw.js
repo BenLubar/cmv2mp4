@@ -22,7 +22,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "manifest-icon-192.png",
-    "revision": "3eca0024803c1eb2cebb4b1a3f6ddcb6"
+    "revision": "c01f58e336a2e0fc7345a538419f7c9f"
   },
   {
     "url": "manifest.json",
@@ -34,7 +34,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "style.css",
-    "revision": "e31c48a5e09f0467b06916f76a8a5fd0"
+    "revision": "b51824169ffa85b98e4c42db35b79857"
   },
   {
     "url": "ui.js",
@@ -42,7 +42,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "worker.js",
-    "revision": "b3028d659a9698225a552d614da7c6f9"
+    "revision": "d0d47001810b07e28e22d615a7cd8e7a"
   },
   {
     "url": "/cmv2mp4",

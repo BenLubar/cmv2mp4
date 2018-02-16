@@ -37,7 +37,7 @@ a {
 #faq {
 	font-size: 0.75em;
 	max-width: 600px;
-	margin: 5em auto 0;
+	margin: 5em auto 2em;
 }
 
 #faq h1, #faq h2 {

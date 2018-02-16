@@ -53,7 +53,7 @@ Object.defineProperty(Module, 'calledRun', {
 });
 
 function loaded() {
-	if (pako && Module['run'] && Module['asm'] && Module['memoryInitializerRequest'] && tileset) {
+	if (pako && Module['run'] && Module['asm'] && Module['memoryInitializerRequest'].readyState === 4 && tileset) {
 		postMessage({t: 'loaded'});
 	}
 }
@@ -74,12 +74,10 @@ self.onmessage = function(e) {
 };
 
 var xhr = new XMLHttpRequest();
+Module['memoryInitializerRequest'] = xhr;
 xhr.open('GET', 'ffmpeg-mp4.js.mem', true);
 xhr.responseType = 'arraybuffer';
-xhr.onload = function() {
-	Module['memoryInitializerRequest'] = xhr;
-	loaded();
-};
+xhr.onload = loaded;
 xhr.send();
 
 importScripts('pako_inflate.min.js', 'ffmpeg-mp4.asm.js', 'ffmpeg-mp4.js');
@@ -96,41 +94,61 @@ function Decoder(blob) {
 	this.readHeader();
 }
 
-Decoder.prototype.rawWord = function() {
-	if (this.fileOffset + 4 > this.file.size) {
+Decoder.prototype.rawWord = function(count) {
+	var unpack = false;
+	if (!count) {
+		unpack = true;
+		count = 1;
+	}
+	if (this.fileOffset + 4 * count > this.file.size) {
 		throw new Error('unexpected end of file');
 	}
-	var slice = this.file.slice(this.fileOffset, this.fileOffset + 4);
-	this.fileOffset += 4;
-	return new Uint32Array(reader.readAsArrayBuffer(slice))[0];
+	var slice = this.file.slice(this.fileOffset, this.fileOffset + 4 * count);
+	this.fileOffset += 4 * count;
+	var words = new Uint32Array(reader.readAsArrayBuffer(slice));
+	return unpack ? words[0] : words;
 };
 
-Decoder.prototype.rawString50 = function() {
-	if (this.fileOffset + 50 > this.file.size) {
+Decoder.prototype.rawString50 = function(count) {
+	var unpack = false;
+	if (!count) {
+		unpack = true;
+		count = 1;
+	}
+	if (this.fileOffset + 50 * count > this.file.size) {
 		throw new Error('unexpected end of file');
 	}
-	var slice = this.file.slice(this.fileOffset, this.fileOffset + 50);
+	var slice = this.file.slice(this.fileOffset, this.fileOffset + 50 * count);
 	var raw = new Uint8Array(reader.readAsArrayBuffer(slice));
-	this.fileOffset += 50;
-	var chars = [];
-	for (var i = 0; i < 50; i++) {
-		if (!raw[i]) {
-			break;
+	this.fileOffset += 50 * count;
+	var strings = [];
+	for (var i = 0; i < count; i++) {
+		var chars = [];
+		for (var i = 0; i < 50; i++) {
+			if (!raw[i]) {
+				break;
+			}
+			chars.push(raw[i]);
 		}
-		chars.push(raw[i]);
+		var string = String.fromCharCode.apply(String, chars);
+		if (unpack) {
+			return string;
+		}
+		strings.push(string);
 	}
-	return String.fromCharCode.apply(String, chars);
+	return strings;
 };
 
 Decoder.prototype.readHeader = function() {
-	this.version = this.rawWord();
-	if (this.version !== 0x2710 && this.version !== 0x2711) {
+	var rawHeader = this.rawWord(4);
+	this.version = rawHeader[0];
+	if (this.version !== 10000 && this.version !== 10001) {
 		throw new Error('not a CMV file');
 	}
-	this.columns = this.rawWord();
-	this.rows = this.rawWord();
+	this.columns = rawHeader[1];
+	this.rows = rawHeader[2];
 	this.frameSize = this.columns * this.rows * 2;
-	this.delayrate = this.rawWord();
+	this.delayrate = rawHeader[3];
 	this.sounds = {
 		files: [],
 		time: []
@@ -140,12 +158,11 @@ Decoder.prototype.readHeader = function() {
 	}
 	if (this.version === 0x2711) {
 		var count = this.rawWord();
-		for (var i = 0; i < count; i++) {
-			this.sounds.files.push(this.rawString50());
-		}
+		this.sounds.files = this.rawString50(count);
+		var raw = this.rawWord(200 * 16);
 		for (var i = 0; i < 200; i++) {
 			for (var j = 0; j < 16; j++) {
-				var index = this.rawWord();
+				var index = raw[i * 16 + j];
 				if (index !== -1) {
 					this.sounds.time[i].push(index);
 				}
