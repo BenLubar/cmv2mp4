@@ -39,7 +39,8 @@ self.onmessage = function(e) {
 		loaded();
 		break;
 	case 'convert':
-		convert(msg.n, msg.d);
+		var reader = new FileReaderSync();
+		convert(msg.n, new Uint8Array(reader.readAsArrayBuffer(msg.d)));
 		break;
 	default:
 		debugger;

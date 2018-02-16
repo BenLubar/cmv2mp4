@@ -82,38 +82,34 @@ function runQueued() {
 	worker.postMessage(tilesetData);
 
 	var name = f.name;
-	var reader = new FileReader();
-	reader.onload = function() {
-		gtag('event', 'cmv-started');
+	gtag('event', 'cmv-started');
 
-		while (Object.hasOwnProperty.call(files, name)) {
-			name = name.replace(/\.cmv$/, '') + '_.cmv';
-		}
+	while (Object.hasOwnProperty.call(files, name)) {
+		name = name.replace(/\.cmv$/, '') + '_.cmv';
+	}
 
-		var div = document.createElement('div');
-		div.className = 'file';
+	var div = document.createElement('div');
+	div.className = 'file';
 
-		var b = document.createElement('b');
-		b.textContent = name;
-		div.appendChild(b);
+	var b = document.createElement('b');
+	b.textContent = name;
+	div.appendChild(b);
 
-		div.appendChild(document.createElement('br'));
+	div.appendChild(document.createElement('br'));
 
-		var progress = document.createElement('progress');
-		progress.max = 1;
-		div.appendChild(progress);
+	var progress = document.createElement('progress');
+	progress.max = 1;
+	div.appendChild(progress);
 
-		files[name] = {p: progress};
+	files[name] = {p: progress};
 
-		button.parentNode.insertBefore(div, button.nextSibling);
+	button.parentNode.insertBefore(div, button.nextSibling);
 
-		myWorker.postMessage({
-			t: 'convert',
-			n: name,
-			d: new Uint8Array(this.result)
-		});
-	};
-	reader.readAsArrayBuffer(f);
+	myWorker.postMessage({
+		t: 'convert',
+		n: name,
+		d: f
+	});
 }
 
 file.addEventListener('change', function() {
