@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dwarf Fortress CMV to MP4 converter</title>
+<link href="style.css" rel="stylesheet">
+<link href="worker.js" rel="prefetch">
+<link href="curses_800x600.png" rel="prefetch">
+<link href="pako_inflate.min.js" rel="prefetch">
+<link href="ffmpeg-mp4.js" rel="prefetch">
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-41367436-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-41367436-1');
+</script>
+</head>
+<body>
+<form id="upload">
+<input type="file" accept=".cmv" multiple id="file" hidden>
+<button id="button" disabled>Loading...</button>
+<script async src="ui.js"></script>
+</form>
+<div id="faq">
+<h1>Hypothetically Asked Questions</h1>
+<h2 id="faq_wth">&hellip;what the hell is this?</h2>
+<p>It's a webpage that converts Dwarf Fortress CMV files into MP4 files using the H.264 codec.</p>
+<h2 id="faq_idk">I don't know what any of those things are.</h2>
+<p>Alright, here are some links:</p>
+<ul>
+<li><a href="http://bay12games.com/dwarves/">Dwarf Fortress</a> is a game made by <a href="https://en.wikipedia.org/wiki/Tarn_Adams">Tarn Adams</a>, his brother <a href="https://twitter.com/threetoebay12">Zach</a>, and his cat <a href="https://dwarffortresswiki.org/images/7/72/Scamps.png">Scamps</a>. In the game, you control a fortress full of dwarves who don't listen to you, and also there's no way to win the game.</li>
+<li><a href="https://dwarffortresswiki.org/index.php/CMV">CMV</a> is the name of the proprietary file format Dwarf Fortress uses to record videos.</li>
+<li><a href="https://en.wikipedia.org/wiki/MPEG-4_Part_14">MP4</a> is a commonly used video container format.</li>
+<li><a href="https://en.wikipedia.org/wiki/H.264/MPEG-4_AVC">H.264</a> is a commonly used video compression standard.</li>
+</ul>
+<h2 id="faq_how">wha&hellip; HOW?</h2>
+<p>The CMV decoding code is based on <a href="https://benlubar.github.io/cmvjs/">cmvjs</a>, but the actual video encoding is done with ffmpeg. In your browser.</p>
+<p>This page uses a custom version of <a href="https://github.com/Kagami/ffmpeg.js">ffmpeg.js</a> with just the components needed for this page. It also uses <a href="https://github.com/nodeca/pako">pako</a> to decompress parts of CMV files.</p>
+<h2 id="faq_why">But&hellip; Why?</h2>
+<p>Mostly because I was bored on February 15th, 2018.</p>
+<h2 id="faq_pfm">I don't want to play Dwarf Fortress. Can you play it for me?</h2>
+<p>Yes! You can install <a href="https://github.com/BenLubar/df-ai/releases/latest">df-ai</a> in your copy of Dwarf Fortress and then pretend I'm sitting with you in front of your computer.</p>
+</div>
+</body>
+</html>

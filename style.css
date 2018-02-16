@@ -1,0 +1,51 @@
+html {
+	background: #333;
+	font: 1.5em sans-serif;
+	color: #eee;
+	transition: box-shadow 0.2s;
+	box-shadow: 0 0 0 #333 inset;
+	height: 100%;
+}
+
+.dragdrop {
+	transition: box-shadow 0.5s;
+	box-shadow: 0 0 5em #ffa inset;
+}
+
+form {
+	text-align: center;
+}
+
+#button {
+	font-size: 2em;
+	padding: 0.25em 1em;
+	margin: 1.5em 0 0;
+}
+
+.file {
+	margin: 1em;
+}
+
+a {
+	color: #aaf;
+}
+
+.error {
+	color: #f77;
+}
+
+#faq {
+	font-size: 0.75em;
+	max-width: 600px;
+	margin: 5em auto 0;
+	text-align: justify;
+}
+
+#faq h1, #faq h2 {
+	color: #fff;
+	font-weight: normal;
+}
+
+#faq li, #faq p {
+	line-height: 1.5;
+}
