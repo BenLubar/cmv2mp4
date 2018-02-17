@@ -33,10 +33,21 @@ var Module = {
 	'stdin': function() { return null; }
 };
 
+var soundWhitelist = [
+	'baybeyond.ogg',
+	'bayend.ogg',
+	'bayquality.ogg',
+	'baystart.ogg',
+	'DFINTROEND.ogg',
+	'DFINTRO.ogg',
+	'DFPICK.ogg',
+	'DFRUBBLE.ogg'
+];
+
 Object.defineProperty(Module, 'calledRun', {
 	get: function() {
 		// return true the first time to prevent the initial run.
-		// as of emscripten 1.37.33, noInitialRun is broken.
+		// noInitialRun won't work because we need to define Module properties later.
 		if (realCalledRun === null) {
 			realCalledRun = false;
 			return true;
@@ -152,7 +163,7 @@ Decoder.prototype.readHeader = function() {
 	for (var i = 0; i < 200; i++) {
 		this.sounds.time.push([]);
 	}
-	if (this.version === 0x2711) {
+	if (this.version === 10001) {
 		var count = this.rawWord();
 		this.sounds.files = this.rawString50(count);
 		var raw = this.rawWord(200 * 16);
@@ -433,7 +444,6 @@ var MP4OutputDevice = {
 };
 
 var lastStatus = 'starting encoder...';
-var logLines = [];
 
 function convert(name, blob) {
 	CMVInputDevice.name = name;
@@ -448,6 +458,12 @@ function convert(name, blob) {
 	}
 
 	var mp4Name = name.replace(/\.cmv$/, '') + '.mp4';
+
+	var allowedSounds = decoder.sounds.files.map(function(sound, i) {
+		return [sound + '.ogg', i];
+	}).filter(function(sound) {
+		return soundWhitelist.indexOf(sound[0]) !== -1;
+	});
 
 	Module['preRun'].push(function() {
 		var work = FS.mkdir('/work');
@@ -464,6 +480,22 @@ function convert(name, blob) {
 		var outdev = FS.makedev(FS.createDevice.major++, 0);
 		FS.registerDevice(outdev, MP4OutputDevice.device);
 		FS.mkdev('/work/' + mp4Name, FS.getMode(true, true), outdev);
+
+		allowedSounds.map(function(sound) {
+			return sound[0];
+		}).filter(function(sound, i, a) {
+			return a.indexOf(sound) === i;
+		}).forEach(function(sound) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', sound, false);
+			xhr.responseType = 'arraybuffer';
+			xhr.send();
+
+			var data = new Uint8Array(xhr.response);
+			var fd = FS.open(sound, 'w');
+			FS.write(fd, data, 0, data.length);
+			FS.close(fd);
+		});
 	});
 
 	Module['postRun'].push(function() {
@@ -504,7 +536,7 @@ function convert(name, blob) {
 				logBuffer.pop();
 			}
 			if (logBuffer.length) {
-				logLines.push(String.fromCharCode.apply(String, logBuffer));
+				console.log('[' + name + '] ' + String.fromCharCode.apply(String, logBuffer));
 				logBuffer.splice(0, logBuffer.length);
 			}
 			return;
@@ -516,18 +548,66 @@ function convert(name, blob) {
 		logBuffer.push(c);
 	};
 
-	var size = (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height);
-	Module['run']([
+	var args = [
 		'-r', '100/' + (decoder.delayrate || 2),
-		'-s', size,
+		'-s', (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height),
 		'-f', 'rawvideo',
 		'-pix_fmt', 'rgb24',
-		'-i', name,
+		'-i', name
+	];
+
+	if (allowedSounds.length) {
+		var audioTimestamps = [];
+		for (var i = 0; i < 200; i++) {
+			decoder.sounds.time[i].forEach(function(j) {
+				allowedSounds.filter(function(sound) {
+					return sound[1] === j;
+				}).forEach(function(sound) {
+					audioTimestamps.push([sound[0], i * decoder.delayrate / 100]);
+				});
+			});
+		}
+
+		if (audioTimestamps.length) {
+			var afilter = [];
+			audioTimestamps.forEach(function(sound, i) {
+				var ms = Math.round(sound[1] * 1000);
+				afilter.push('[', i + 1, ':a]');
+				if (ms) {
+					afilter.push('adelay=', ms, '|', ms, ',');
+				}
+				afilter.push('apad[a', i, '];');
+				args.push('-i', sound[0]);
+			});
+			for (var i = 0; i < audioTimestamps.length; i++) {
+				afilter.push('[a', i, ']');
+			}
+			afilter.push('amerge=inputs=', audioTimestamps.length, ',pan=stereo|c0=');
+			for (var i = 0; i < audioTimestamps.length; i++) {
+				afilter.push('c', i * 2, '+');
+			}
+			afilter.pop();
+			afilter.push('|c1=');
+			for (var i = 0; i < audioTimestamps.length; i++) {
+				afilter.push('c', i * 2 + 1, '+');
+			}
+			afilter.pop();
+			afilter.push('[aout]');
+
+			args.push('-filter_complex', afilter.join(''));
+
+			args.push('-map', '0:v', '-map', '[aout]', '-c:a', 'libfdk_aac', '-shortest');
+		}
+	}
+
+	args.push(
 		'-c:v', 'libx264',
 		'-crf', '0',
 		'-pix_fmt', 'yuv444p',
 		'-movflags', '+faststart',
 		'-preset', 'ultrafast',
 		'-y', mp4Name
-	]);
+	);
+
+	Module['run'](args);
 }

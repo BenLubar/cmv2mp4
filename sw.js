@@ -5,16 +5,48 @@ workbox.clientsClaim();
 workbox.googleAnalytics.initialize();
 workbox.precaching.precacheAndRoute([
   {
+    "url": "baybeyond.ogg",
+    "revision": "ed00e117554df7e13351f60003415a6f"
+  },
+  {
+    "url": "bayend.ogg",
+    "revision": "88261d82de9b37a21d8e6a1ceb516bb3"
+  },
+  {
+    "url": "bayquality.ogg",
+    "revision": "0dde01264c72be6790f62e1533e8cd9f"
+  },
+  {
+    "url": "baystart.ogg",
+    "revision": "4d5508f89c9620239b447f6abbe18694"
+  },
+  {
     "url": "curses_800x600.png",
     "revision": "1faa2c26603e89b176f0d1a684aea383"
   },
   {
+    "url": "DFINTRO.ogg",
+    "revision": "634262897dc957c3b0373ec4bccff16a"
+  },
+  {
+    "url": "DFINTROEND.ogg",
+    "revision": "d1b3e3d8561036c2f59b3db46c3f01c3"
+  },
+  {
+    "url": "DFPICK.ogg",
+    "revision": "e8ce1aeafe3452cff10e0b98b565b5e8"
+  },
+  {
+    "url": "DFRUBBLE.ogg",
+    "revision": "194dcb95b4d58a3e42eb30a527d6df79"
+  },
+  {
     "url": "ffmpeg-mp4.js",
-    "revision": "aa6e509527a6c12d06663e6c58fa19bb"
+    "revision": "c3f44d67606527248c7d77277647309c"
   },
   {
     "url": "ffmpeg-mp4.js.mem",
-    "revision": "61fcb0337d50fa73f3cb45ee37f7d721"
+    "revision": "b72ec106f1e9d010a8bfa13b695392f7"
   },
   {
     "url": "index.html",
@@ -38,11 +70,11 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "ui.js",
-    "revision": "728e7ca5383b640fd0626ca227964fef"
+    "revision": "03e9bddf7bdca1593e03226a373b8a26"
   },
   {
     "url": "worker.js",
-    "revision": "aa5329cb1576fdaf1a30b0bba545ccfb"
+    "revision": "e864324fe6fa899e5a0ef76336753f00"
   },
   {
     "url": "/cmv2mp4",

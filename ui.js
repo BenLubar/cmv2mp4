@@ -1,5 +1,6 @@
 (function() {
 
+var updateAvailable = false;
 var button = document.getElementById('button');
 var file = document.getElementById('file');
 var files = {};
@@ -12,17 +13,19 @@ function workerMessage(e) {
 		if (queue.length) {
 			runQueued();
 		} else {
-			button.onclick = function() {
-				file.click();
-				return false;
-			};
+			if (!updateAvailable) {
+				button.onclick = function() {
+					file.click();
+					return false;
+				};
+				button.innerText = 'Choose CMV File';
+			}
 			button.disabled = false;
-			button.innerText = 'Choose CMV File';
 		}
 		break;
 	case 'progress':
 		files[msg.n].p.value = (msg.fo - (1 - msg.co / msg.cs) * msg.ls - msg.hs) / (msg.fs - msg.hs);
-		files[msg.n].s.textContent = msg.s;
+		files[msg.n].s.innerText = msg.s;
 		break;
 	case 'error':
 		gtag('event', 'cmv-error');
@@ -31,17 +34,17 @@ function workerMessage(e) {
 		span.innerText = msg.e;
 		span.setAttribute('data-stack-trace', msg.s);
 		files[msg.n].p.parentNode.replaceChild(span, files[msg.n].p);
-		files[msg.n].s.textContent = '';
+		files[msg.n].s.innerText = '';
 		delete files[msg.n];
 		break;
 	case 'mp4':
 		gtag('event', 'cmv-finished');
 		var a = document.createElement('a');
-		a.textContent = msg.m;
+		a.innerText = msg.m;
 		a.download = msg.m;
 		a.href = URL.createObjectURL(msg.d);
 		files[msg.n].p.parentNode.replaceChild(a, files[msg.n].p);
-		files[msg.n].s.textContent = Math.round(msg.d.size / 1024 / 1024 * 10) / 10 + ' MiB';
+		files[msg.n].s.innerText = Math.round(msg.d.size / 1024 / 1024 * 10) / 10 + ' MiB';
 		delete files[msg.n];
 		break;
 	default:
@@ -93,7 +96,7 @@ function runQueued() {
 	div.className = 'file';
 
 	var b = document.createElement('b');
-	b.textContent = name;
+	b.innerText = name;
 	div.appendChild(b);
 
 	div.appendChild(document.createElement('br'));
@@ -104,7 +107,7 @@ function runQueued() {
 
 	var status = document.createElement('pre');
 	status.className = 'status';
-	status.textContent = 'preparing to convert...';
+	status.innerText = 'preparing to convert...';
 	div.appendChild(status);
 
 	files[name] = {p: progress, s: status};
@@ -165,6 +168,15 @@ document.addEventListener('dragleave', function() {
 });
 
 if ('serviceWorker' in navigator) {
+	navigator.serviceWorker.addEventListener('controllerchange', function() {
+		updateAvailable = true;
+		button.innerText = 'Refresh for Update';
+		button.onclick = function() {
+			location.reload();
+			return false;
+		};
+		button.disabled = false;
+	});
 	window.addEventListener('load', function() {
 		navigator.serviceWorker.register('/cmv2mp4/sw.js');
 	});
