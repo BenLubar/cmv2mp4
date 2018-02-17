@@ -34,10 +34,17 @@ a {
 	color: #f77;
 }
 
+.status {
+	font-size: 0.75em;
+	margin: 0;
+	height: 2em;
+	line-height: 2;
+}
+
 #faq {
 	font-size: 0.75em;
 	max-width: 600px;
-	margin: 5em auto 2em;
+	margin: 2em auto;
 }
 
 #faq h1, #faq h2 {

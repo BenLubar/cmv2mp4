@@ -34,15 +34,15 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "style.css",
-    "revision": "b51824169ffa85b98e4c42db35b79857"
+    "revision": "01809d6ec29ee7de3de1d9d60ddda3c2"
   },
   {
     "url": "ui.js",
-    "revision": "482a096ce5f448ab7c098bbb8acb9ee5"
+    "revision": "728e7ca5383b640fd0626ca227964fef"
   },
   {
     "url": "worker.js",
-    "revision": "c0f263ff0b320cf9b7185b9ea4cd3257"
+    "revision": "70678b7cff8d647e026c14b9f0e022a1"
   },
   {
     "url": "/cmv2mp4",

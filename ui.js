@@ -21,8 +21,8 @@ function workerMessage(e) {
 		}
 		break;
 	case 'progress':
-		var frame = msg.f; // TODO
 		files[msg.n].p.value = (msg.fo - (1 - msg.co / msg.cs) * msg.ls - msg.hs) / (msg.fs - msg.hs);
+		files[msg.n].s.textContent = msg.s;
 		break;
 	case 'error':
 		gtag('event', 'cmv-error');
@@ -31,6 +31,7 @@ function workerMessage(e) {
 		span.innerText = msg.e;
 		span.setAttribute('data-stack-trace', msg.s);
 		files[msg.n].p.parentNode.replaceChild(span, files[msg.n].p);
+		files[msg.n].s.textContent = '';
 		delete files[msg.n];
 		break;
 	case 'mp4':
@@ -40,6 +41,7 @@ function workerMessage(e) {
 		a.download = msg.m;
 		a.href = URL.createObjectURL(msg.d);
 		files[msg.n].p.parentNode.replaceChild(a, files[msg.n].p);
+		files[msg.n].s.textContent = Math.round(msg.d.size / 1024 / 1024 * 10) / 10 + ' MiB';
 		delete files[msg.n];
 		break;
 	default:
@@ -100,7 +102,12 @@ function runQueued() {
 	progress.max = 1;
 	div.appendChild(progress);
 
-	files[name] = {p: progress};
+	var status = document.createElement('pre');
+	status.className = 'status';
+	status.textContent = 'preparing to convert...';
+	div.appendChild(status);
+
+	files[name] = {p: progress, s: status};
 
 	button.parentNode.insertBefore(div, button.nextSibling);
 

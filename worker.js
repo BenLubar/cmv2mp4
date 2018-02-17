@@ -30,11 +30,7 @@ var realCalledRun = null;
 
 var Module = {
 	'thisProgram': 'ffmpeg',
-	'stdin': function() { return null; },
-	'printErr': function() {
-		var args = ['[' + CMVInputDevice.name + '] '].concat([].slice.call(arguments, 0));
-		console.log.apply(console, args);
-	}
+	'stdin': function() { return null; }
 };
 
 Object.defineProperty(Module, 'calledRun', {
@@ -339,6 +335,7 @@ var CMVInputDevice = {
 			t: 'progress',
 			n: CMVInputDevice.name,
 			f: CMVInputDevice.frame,
+			s: lastStatus,
 			hs: decoder.headerSize,
 			co: decoder.chunkOffset,
 			cs: decoder.chunk.length,
@@ -435,6 +432,9 @@ var MP4OutputDevice = {
 	}
 };
 
+var lastStatus = 'starting encoder...';
+var logLines = [];
+
 function convert(name, blob) {
 	CMVInputDevice.name = name;
 
@@ -487,6 +487,7 @@ function convert(name, blob) {
 		t: 'progress',
 		n: name,
 		f: 0,
+		s: lastStatus,
 		hs: decoder.headerSize,
 		co: 0,
 		cs: 1,
@@ -495,9 +496,31 @@ function convert(name, blob) {
 		fs: decoder.file.size
 	});
 
+	var logBuffer = [];
+
+	Module['stdout'] = Module['stderr'] = function(c) {
+		if (c === '\n'.charCodeAt(0)) {
+			if (logBuffer[logBuffer.length - 1] === '\r'.charCodeAt(0)) {
+				logBuffer.pop();
+			}
+			if (logBuffer.length) {
+				logLines.push(String.fromCharCode.apply(String, logBuffer));
+				logBuffer.splice(0, logBuffer.length);
+			}
+			return;
+		}
+		if (logBuffer[logBuffer.length - 1] === '\r'.charCodeAt(0)) {
+			lastStatus = String.fromCharCode.apply(String, logBuffer);
+			logBuffer.splice(0, logBuffer.length);
+		}
+		logBuffer.push(c);
+	};
+
 	var size = (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height);
 	Module['run']([
-		'-r', '50',
+		// HACK: intro videos play at half speed, and as far as I know,
+		// no other CMV files have sound.
+		'-r', decoder.sounds.files.length ? '25' : '50',
 		'-s', size,
 		'-f', 'rawvideo',
 		'-pix_fmt', 'rgb24',
