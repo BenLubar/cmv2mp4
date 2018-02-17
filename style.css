@@ -2,14 +2,24 @@ html {
 	background: #333;
 	font: 1.5em sans-serif;
 	color: #eee;
-	transition: box-shadow 0.2s;
-	box-shadow: 0 0 0 #333 inset;
 	height: 100%;
 }
 
-.dragdrop {
+#dragdrop {
+	pointer-events: none;
 	transition: box-shadow 0.5s;
 	box-shadow: 0 0 5em #ffa inset;
+	position: fixed;
+	z-index: 10;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+}
+
+#dragdrop.inactive {
+	transition: box-shadow 0.2s;
+	box-shadow: 0 0 0 #333 inset;
 }
 
 #upload {
@@ -40,9 +50,9 @@ a {
 
 .status {
 	font-size: 0.75em;
-	margin: 0;
-	height: 2em;
-	line-height: 2;
+	margin: 0.5em;
+	height: 2.5em;
+	line-height: 1.25;
 }
 
 #faq {

@@ -5,6 +5,7 @@ var button = document.getElementById('button');
 var uploadFromUrl = document.getElementById('upload_from_url');
 var ufuUrl = document.getElementById('ufu_url');
 var file = document.getElementById('file');
+var dragdrop = document.getElementById('dragdrop');
 var files = {};
 var queue = [];
 
@@ -28,7 +29,7 @@ function workerMessage(e) {
 		break;
 	case 'progress':
 		files[msg.n].p.value = (msg.fo - (1 - msg.co / msg.cs) * msg.ls - msg.hs) / (msg.fs - msg.hs);
-		files[msg.n].s.innerText = msg.s;
+		files[msg.n].s.innerText = msg.s.replace(/kB time=/, 'kB\ntime=').replace(/= +/g, '=').replace(/\s+$/, '');
 		break;
 	case 'error':
 		gtag('event', 'cmv-error');
@@ -136,12 +137,12 @@ file.addEventListener('change', function() {
 	}
 });
 
-document.addEventListener('drop', function(e) {
+document.body.parentNode.addEventListener('drop', function(e) {
 	e.preventDefault();
 
 	gtag('event', 'cmv-drop');
 
-	document.body.parentNode.classList.remove('dragdrop');
+	dragdrop.classList = 'inactive';
 
 	var dt = e.dataTransfer;
 	if (dt.items) {
@@ -160,14 +161,14 @@ document.addEventListener('drop', function(e) {
 	}
 });
 
-document.addEventListener('dragover', function(e) {
+document.body.parentNode.addEventListener('dragover', function(e) {
 	e.preventDefault();
 
-	document.body.parentNode.classList.add('dragdrop');
+	dragdrop.classList = '';
 });
 
-document.addEventListener('dragleave', function() {
-	document.body.parentNode.classList.remove('dragdrop');
+document.body.parentNode.addEventListener('dragleave', function() {
+	dragdrop.classList = 'inactive';
 });
 
 uploadFromUrl.addEventListener('submit', function(e) {
@@ -253,19 +254,26 @@ uploadFromUrl.addEventListener('submit', function(e) {
 });
 
 if ('serviceWorker' in navigator) {
-	navigator.serviceWorker.addEventListener('controllerchange', function() {
-		updateAvailable = true;
-		button.innerText = 'Refresh for Update';
-		button.onclick = function() {
-			location.reload();
-			return false;
-		};
-		button.disabled = false;
-		uploadFromUrl.setAttribute('hidden', '');
-	});
+	if (navigator.serviceWorker.controller) {
+		navigator.serviceWorker.addEventListener('controllerchange', function() {
+			updateAvailable = true;
+			button.innerText = 'Refresh for Update';
+			button.onclick = function() {
+				location.reload();
+				return false;
+			};
+			button.disabled = false;
+			uploadFromUrl.setAttribute('hidden', '');
+		});
+	}
 	window.addEventListener('load', function() {
 		navigator.serviceWorker.register('/cmv2mp4/sw.js');
 	});
 }
+
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-41367436-1');
 
 })();

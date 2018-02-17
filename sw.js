@@ -42,15 +42,15 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "ffmpeg-mp4.js",
-    "revision": "c3f44d67606527248c7d77277647309c"
+    "revision": "5aeeb7089d1d24be65d9a3b9bced91a3"
   },
   {
     "url": "ffmpeg-mp4.js.mem",
-    "revision": "b72ec106f1e9d010a8bfa13b695392f7"
+    "revision": "e8bf86bc72ace99709585cf6ca1881ca"
   },
   {
     "url": "index.html",
-    "revision": "88210ce102e3a7f5a4cc79823f5bac68"
+    "revision": "94cb953fe80e7876fc1faa7bd58cbeca"
   },
   {
     "url": "manifest-icon-192.png",
@@ -66,11 +66,11 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "style.css",
-    "revision": "a569e83778e78c4cc7c5719b580310d1"
+    "revision": "4688156b221fcb4ecbb95276c240c8d5"
   },
   {
     "url": "ui.js",
-    "revision": "9a411b24562e282100293d4bc6a9f918"
+    "revision": "f42f85c1df3b0d1641f9847837140764"
   },
   {
     "url": "worker.js",

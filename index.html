@@ -3,9 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Dwarf Fortress CMV to MP4 converter</title>
-<link href="//google-analytics.com" rel="preconnect">
-<link href="//stats.g.doubleclick.net" rel="preconnect">
-<link href="//www.googletagmanager.com" rel="preconnect">
+<link href="https://cors-anywhere.herokuapp.com" rel="dns-prefetch">
 <link href="manifest.json" rel="manifest">
 <link href="sw.js" rel="prefetch">
 <link href="ui.js" rel="prefetch">
@@ -16,19 +14,14 @@
 <link href="ffmpeg-mp4.asm.js" rel="prefetch">
 <link href="ffmpeg-mp4.js.mem" rel="prefetch">
 <link href="manifest-icon-192.png" rel="icon">
-<link href="style.css" rel="stylesheet">
 <meta name="theme-color" content="#333">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="style.css" rel="stylesheet">
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41367436-1"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'UA-41367436-1');
-</script>
 </head>
 <body>
+<div id="dragdrop" class="inactive"></div>
 <div id="upload">
 <input type="file" accept=".cmv" multiple id="file" hidden>
 <button id="button" disabled>Loading...</button>
