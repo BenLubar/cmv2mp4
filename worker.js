@@ -395,12 +395,12 @@ var MP4OutputDevice = {
 			return offset;
 		},
 		read: function(stream, buffer, offset, length, pos) {
-			var bytesRead = Math.min(length, Math.max(MP4OutputDevice.blob.size - pos, MP4OutputDevice.offset ? MP4OutputDevice.start + MP4OutputDevice.offset - pos : 0));
+			MP4OutputDevice.device.flush(stream);
+
+			var bytesRead = Math.min(length, MP4OutputDevice.blob.size - pos);
 			if (!bytesRead) {
 				return 0;
 			}
-
-			MP4OutputDevice.device.flush(stream);
 
 			var slice = MP4OutputDevice.blob.slice(pos, pos + bytesRead);
 			var data = reader.readAsArrayBuffer(slice);
@@ -419,8 +419,8 @@ var MP4OutputDevice = {
 					MP4OutputDevice.start = pos;
 				}
 				var added = Math.min(MP4OutputDevice.buffer.length - MP4OutputDevice.offset, remaining);
+				MP4OutputDevice.buffer.set(buffer.subarray(offset, offset + added), MP4OutputDevice.offset);
 				MP4OutputDevice.offset += added;
-				MP4OutputDevice.buffer.set(buffer.subarray(offset, offset + added), 0);
 				if (MP4OutputDevice.offset === MP4OutputDevice.buffer.length) {
 					MP4OutputDevice.device.flush(stream);
 				}
