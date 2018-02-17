@@ -50,7 +50,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "index.html",
-    "revision": "1ebd8557a2c31ed5e3cd788b495917c2"
+    "revision": "d024e4bff48a6e96dd93ef27ddcf2e63"
   },
   {
     "url": "manifest-icon-192.png",
