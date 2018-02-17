@@ -120,7 +120,7 @@ Decoder.prototype.rawString50 = function(count) {
 	var strings = [];
 	for (var i = 0; i < count; i++) {
 		var chars = [];
-		for (var j = 0; j < 50; i++) {
+		for (var j = 0; j < 50; j++) {
 			if (!raw[i * 50 + j]) {
 				break;
 			}
@@ -159,7 +159,7 @@ Decoder.prototype.readHeader = function() {
 		for (var i = 0; i < 200; i++) {
 			for (var j = 0; j < 16; j++) {
 				var index = raw[i * 16 + j];
-				if (index !== -1) {
+				if (index !== 0xffffffff) {
 					this.sounds.time[i].push(index);
 				}
 			}
