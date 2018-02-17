@@ -436,14 +436,16 @@ var MP4OutputDevice = {
 };
 
 function convert(name, blob) {
+	CMVInputDevice.name = name;
+
 	var decoder;
 	try {
 		decoder = new Decoder(blob);
+		CMVInputDevice.decoder = decoder;
 	} catch (err) {
 		fail(err);
+		return;
 	}
-	CMVInputDevice.name = name;
-	CMVInputDevice.decoder = decoder;
 
 	var mp4Name = name.replace(/\.cmv$/, '') + '.mp4';
 
