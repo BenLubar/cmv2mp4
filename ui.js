@@ -6,13 +6,22 @@ var uploadFromUrl = document.getElementById('upload_from_url');
 var ufuUrl = document.getElementById('ufu_url');
 var file = document.getElementById('file');
 var dragdrop = document.getElementById('dragdrop');
+var concurrency = document.getElementById('concurrency');
+var workerReady = false;
 var files = {};
 var queue = [];
+
+concurrency.value = Math.max(localStorage.cmv2mp4_concurrency || Math.min(navigator.hardwareConcurrency || 2, navigator.deviceMemory || 4), 1);
+concurrency.addEventListener('change', function() {
+	localStorage.cmv2mp4_concurrency = parseInt(concurrency.value, 10);
+	runQueued();
+});
 
 function workerMessage(e) {
 	var msg = e.data;
 	switch (msg.t) {
 	case 'loaded':
+		workerReady = true;
 		if (queue.length) {
 			runQueued();
 		} else {
@@ -40,6 +49,7 @@ function workerMessage(e) {
 		files[msg.n].p.parentNode.replaceChild(span, files[msg.n].p);
 		files[msg.n].s.innerText = '';
 		delete files[msg.n];
+		runQueued();
 		break;
 	case 'mp4':
 		gtag('event', 'cmv-finished');
@@ -50,6 +60,7 @@ function workerMessage(e) {
 		files[msg.n].p.parentNode.replaceChild(a, files[msg.n].p);
 		files[msg.n].s.innerText = Math.round(msg.d.size / 1024 / 1024 * 10) / 10 + ' MiB';
 		delete files[msg.n];
+		runQueued();
 		break;
 	default:
 		debugger;
@@ -81,9 +92,13 @@ tileset.onload = function() {
 tileset.src = 'curses_800x600.png';
 
 function runQueued() {
+	if (!workerReady || concurrency.value <= Object.keys(files).length) {
+		return;
+	}
+
 	var f = queue.shift();
 	var myWorker = worker;
-	button.disabled = true;
+	workerReady = false;
 
 	worker = new Worker('worker.js');
 	worker.onmessage = workerMessage;
@@ -156,7 +171,7 @@ document.body.parentNode.addEventListener('drop', function(e) {
 		[].push.apply(queue, dt.files);
 	}
 
-	if (!button.disabled) {
+	if (queue.length) {
 		runQueued();
 	}
 });
@@ -245,9 +260,7 @@ uploadFromUrl.addEventListener('submit', function(e) {
 
 		queue.push(xhr.response);
 
-		if (!button.disabled) {
-			runQueued();
-		}
+		runQueued();
 	};
 	xhr.open('GET', cors, true);
 	xhr.send();

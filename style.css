@@ -36,6 +36,14 @@ html {
 	width: 300px;
 }
 
+label, #concurrency {
+	font-size: 0.75em;
+}
+
+#concurrency {
+	width: 40px;
+}
+
 .file {
 	margin: 1em;
 }

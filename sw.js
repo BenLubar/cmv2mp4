@@ -50,7 +50,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "index.html",
-    "revision": "94cb953fe80e7876fc1faa7bd58cbeca"
+    "revision": "f79eb231a30d69288e569f01ec768817"
   },
   {
     "url": "manifest-icon-192.png",
@@ -66,11 +66,11 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "style.css",
-    "revision": "4688156b221fcb4ecbb95276c240c8d5"
+    "revision": "0efed3550f49480e2e5419741366fd29"
   },
   {
     "url": "ui.js",
-    "revision": "f42f85c1df3b0d1641f9847837140764"
+    "revision": "34a3ab8ddf82cfa9cbc1f9e52017e258"
   },
   {
     "url": "worker.js",
