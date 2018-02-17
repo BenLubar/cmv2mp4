@@ -518,9 +518,7 @@ function convert(name, blob) {
 
 	var size = (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height);
 	Module['run']([
-		// HACK: intro videos play at half speed, and as far as I know,
-		// no other CMV files have sound.
-		'-r', decoder.sounds.files.length ? '25' : '50',
+		'-r', '100/' + (decoder.delayrate || 2),
 		'-s', size,
 		'-f', 'rawvideo',
 		'-pix_fmt', 'rgb24',
