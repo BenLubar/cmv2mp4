@@ -96,7 +96,7 @@ function Decoder(blob) {
 
 Decoder.prototype.rawWord = function(count) {
 	var unpack = false;
-	if (!count) {
+	if (!count && count !== 0) {
 		unpack = true;
 		count = 1;
 	}
@@ -111,7 +111,7 @@ Decoder.prototype.rawWord = function(count) {
 
 Decoder.prototype.rawString50 = function(count) {
 	var unpack = false;
-	if (!count) {
+	if (!count && count !== 0) {
 		unpack = true;
 		count = 1;
 	}
@@ -124,11 +124,11 @@ Decoder.prototype.rawString50 = function(count) {
 	var strings = [];
 	for (var i = 0; i < count; i++) {
 		var chars = [];
-		for (var i = 0; i < 50; i++) {
-			if (!raw[i]) {
+		for (var j = 0; j < 50; i++) {
+			if (!raw[i * 50 + j]) {
 				break;
 			}
-			chars.push(raw[i]);
+			chars.push(raw[i * 50 + j]);
 		}
 		var string = String.fromCharCode.apply(String, chars);
 		if (unpack) {

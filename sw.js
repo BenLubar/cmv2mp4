@@ -18,7 +18,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "index.html",
-    "revision": "bbfdfc1e34e64d33efacf447594c02a5"
+    "revision": "1ebd8557a2c31ed5e3cd788b495917c2"
   },
   {
     "url": "manifest-icon-192.png",
@@ -42,7 +42,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "worker.js",
-    "revision": "d0d47001810b07e28e22d615a7cd8e7a"
+    "revision": "574cc14950895f513efc174fdb0cee3d"
   },
   {
     "url": "/cmv2mp4",
