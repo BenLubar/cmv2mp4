@@ -29,11 +29,12 @@ gtag('config', 'UA-41367436-1');
 </script>
 </head>
 <body>
-<form id="upload">
+<div id="upload">
 <input type="file" accept=".cmv" multiple id="file" hidden>
 <button id="button" disabled>Loading...</button>
+<form id="upload_from_url" hidden><input type="url" id="ufu_url" placeholder="https://www.example.com/dwarf_fortress.cmv"> <input type="submit" id="ufu_submit" value="Upload from URL"></form>
 <script async src="ui.js"></script>
-</form>
+</div>
 <div id="faq">
 <h1>Hypothetically Asked Questions</h1>
 <h2 id="faq_wth">&hellip;what the hell is this?</h2>

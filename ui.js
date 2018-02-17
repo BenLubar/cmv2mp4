@@ -2,6 +2,8 @@
 
 var updateAvailable = false;
 var button = document.getElementById('button');
+var uploadFromUrl = document.getElementById('upload_from_url');
+var ufuUrl = document.getElementById('ufu_url');
 var file = document.getElementById('file');
 var files = {};
 var queue = [];
@@ -19,6 +21,7 @@ function workerMessage(e) {
 					return false;
 				};
 				button.innerText = 'Choose CMV File';
+				uploadFromUrl.removeAttribute('hidden');
 			}
 			button.disabled = false;
 		}
@@ -70,7 +73,7 @@ tileset.onload = function() {
 		t: 'tileset',
 		w: data.width,
 		h: data.height,
-		d: data.data,
+		d: data.data
 	};
 	worker.postMessage(tilesetData);
 };
@@ -112,7 +115,7 @@ function runQueued() {
 
 	files[name] = {p: progress, s: status};
 
-	button.parentNode.insertBefore(div, button.nextSibling);
+	uploadFromUrl.parentNode.insertBefore(div, uploadFromUrl.nextSibling);
 
 	myWorker.postMessage({
 		t: 'convert',
@@ -167,6 +170,88 @@ document.addEventListener('dragleave', function() {
 	document.body.parentNode.classList.remove('dragdrop');
 });
 
+uploadFromUrl.addEventListener('submit', function(e) {
+	e.preventDefault();
+
+	if (uploadFromUrl.getAttribute('hidden') !== null || !/^https?:\/\//.test(ufuUrl.value)) {
+		return;
+	}
+
+	var url = ufuUrl.value;
+	ufuUrl.value = '';
+
+	var baseName = url.split('?')[0].split('/');
+	baseName = baseName[baseName.length - 1];
+	if (!baseName) {
+		baseName = encodeURIComponent(url).replace(/%../g, '');
+	}
+	if (!/\.cmv$/.test(baseName)) {
+		baseName += '.cmv';
+	}
+	var cors = 'https://cors-anywhere.herokuapp.com/' + url;
+	gtag('event', 'cmv-url-started');
+
+	var div = document.createElement('div');
+	div.className = 'file';
+
+	var b = document.createElement('b');
+	b.innerText = url;
+	div.appendChild(b);
+
+	div.appendChild(document.createElement('br'));
+
+	var progress = document.createElement('progress');
+	div.appendChild(progress);
+
+	var status = document.createElement('pre');
+	status.className = 'status';
+	status.innerText = 'requesting...';
+	div.appendChild(status);
+
+	uploadFromUrl.parentNode.insertBefore(div, uploadFromUrl.nextSibling);
+
+	var xhr = new XMLHttpRequest();
+	xhr.responseType = 'blob';
+	xhr.onprogress = function(e) {
+		if (e.lengthComputable) {
+			progress.max = e.total;
+			progress.value = e.loaded;
+			status.innerText = 'downloading... ' + e.loaded + ' / ' + e.total;
+		} else {
+			status.innerText = 'downloading...';
+		}
+	};
+	xhr.onload = function(e) {
+		if (xhr.status >= 400) {
+			gtag('event', 'cmv-url-error');
+
+			var span = document.createElement('span');
+			span.className = 'error';
+			span.innerText = xhr.statusText;
+
+			div.replaceChild(span, progress);
+			status.innerText = '';
+
+			return;
+		}
+
+		gtag('event', 'cmv-url-finished');
+
+		uploadFromUrl.parentNode.removeChild(div);
+		try {
+			xhr.response.name = baseName;
+		} catch (ex) {}
+
+		queue.push(xhr.response);
+
+		if (!button.disabled) {
+			runQueued();
+		}
+	};
+	xhr.open('GET', cors, true);
+	xhr.send();
+});
+
 if ('serviceWorker' in navigator) {
 	navigator.serviceWorker.addEventListener('controllerchange', function() {
 		updateAvailable = true;
@@ -176,6 +261,7 @@ if ('serviceWorker' in navigator) {
 			return false;
 		};
 		button.disabled = false;
+		uploadFromUrl.setAttribute('hidden', '');
 	});
 	window.addEventListener('load', function() {
 		navigator.serviceWorker.register('/cmv2mp4/sw.js');
