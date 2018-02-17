@@ -504,6 +504,7 @@ function convert(name, blob) {
 		'-crf', '0',
 		'-pix_fmt', 'yuv444p',
 		'-movflags', '+faststart',
+		'-preset', 'ultrafast',
 		'-y', mp4Name
 	]);
 }
