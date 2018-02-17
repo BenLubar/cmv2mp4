@@ -602,7 +602,7 @@ function convert(name, blob) {
 
 	args.push(
 		'-c:v', 'libx264',
-		'-crf', '0',
+		'-crf', '18',
 		'-pix_fmt', 'yuv444p',
 		'-movflags', '+faststart',
 		'-preset', 'ultrafast',

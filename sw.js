@@ -74,7 +74,7 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "worker.js",
-    "revision": "e864324fe6fa899e5a0ef76336753f00"
+    "revision": "c888d0af726da49289a12b83215f2387"
   },
   {
     "url": "/cmv2mp4",
