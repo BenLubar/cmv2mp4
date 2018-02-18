@@ -4,5 +4,6 @@ module.exports = {
 	globIgnores: ['sw.js', 'sw.src.js', 'workbox-config.js'],
 	swDest: 'sw.js',
 	swSrc: 'sw.src.js',
-	templatedUrls: {'/cmv2mp4': 'index.html'}
+	templatedUrls: {'/cmv2mp4': 'index.html'},
+	maximumFileSizeToCacheInBytes: 5 << 20
 };

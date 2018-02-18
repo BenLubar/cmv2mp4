@@ -41,6 +41,10 @@ workbox.precaching.precacheAndRoute([
     "revision": "194dcb95b4d58a3e42eb30a527d6df79"
   },
   {
+    "url": "ffmpeg-mp4.asm.js",
+    "revision": "b9d721d6359af4691506edb4e526b55e"
+  },
+  {
     "url": "ffmpeg-mp4.js",
     "revision": "de684f3468bd4301c7560020dd6069f8"
   },
