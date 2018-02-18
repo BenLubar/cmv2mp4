@@ -9,7 +9,9 @@ var dragdrop = document.getElementById('dragdrop');
 var concurrency = document.getElementById('concurrency');
 var workerReady = false;
 var files = {};
+var running = 0;
 var queue = [];
+var queue2 = [];
 
 concurrency.value = Math.max(localStorage.cmv2mp4_concurrency || Math.min(navigator.hardwareConcurrency || 2, navigator.deviceMemory || 4), 1);
 concurrency.addEventListener('change', function() {
@@ -22,19 +24,16 @@ function workerMessage(e) {
 	switch (msg.t) {
 	case 'loaded':
 		workerReady = true;
-		if (queue.length) {
-			runQueued();
-		} else {
-			if (!updateAvailable) {
-				button.onclick = function() {
-					file.click();
-					return false;
-				};
-				button.innerText = 'Choose CMV File';
-				uploadFromUrl.removeAttribute('hidden');
-			}
-			button.disabled = false;
+		runQueued();
+		if (!updateAvailable) {
+			button.onclick = function() {
+				file.click();
+				return false;
+			};
+			button.innerText = 'Choose CMV File';
+			uploadFromUrl.removeAttribute('hidden');
 		}
+		button.disabled = false;
 		break;
 	case 'progress':
 		files[msg.n].p.value = (msg.fo - (1 - msg.co / msg.cs) * msg.ls - msg.hs) / (msg.fs - msg.hs);
@@ -49,6 +48,7 @@ function workerMessage(e) {
 		files[msg.n].p.parentNode.replaceChild(span, files[msg.n].p);
 		files[msg.n].s.innerText = '';
 		delete files[msg.n];
+		running--;
 		runQueued();
 		break;
 	case 'mp4':
@@ -60,6 +60,7 @@ function workerMessage(e) {
 		files[msg.n].p.parentNode.replaceChild(a, files[msg.n].p);
 		files[msg.n].s.innerText = Math.round(msg.d.size / 1024 / 1024 * 10) / 10 + ' MiB';
 		delete files[msg.n];
+		running--;
 		runQueued();
 		break;
 	default:
@@ -92,11 +93,46 @@ tileset.onload = function() {
 tileset.src = 'curses_800x600.png';
 
 function runQueued() {
-	if (!workerReady || concurrency.value <= Object.keys(files).length) {
+	while (queue.length) {
+		var f = queue.shift();
+		var name = f.name;
+
+		while (Object.hasOwnProperty.call(files, name)) {
+			name = name.replace(/\.cmv$/, '') + '_.cmv';
+		}
+
+		var div = document.createElement('div');
+		div.className = 'file';
+
+		var b = document.createElement('b');
+		b.innerText = name;
+		div.appendChild(b);
+
+		div.appendChild(document.createElement('br'));
+
+		var progress = document.createElement('progress');
+		progress.max = 1;
+		div.appendChild(progress);
+
+		var status = document.createElement('pre');
+		status.className = 'status';
+		status.innerText = 'waiting for a slot...';
+		div.appendChild(status);
+
+		files[name] = {p: progress, s: status};
+
+		uploadFromUrl.parentNode.insertBefore(div, uploadFromUrl.nextSibling);
+
+		queue2.push([f, name]);
+	}
+
+	if (!queue2.length || !workerReady || concurrency.value <= running) {
 		return;
 	}
 
-	var f = queue.shift();
+	var f = queue2.shift();
+	running++;
+
 	var myWorker = worker;
 	workerReady = false;
 
@@ -104,39 +140,14 @@ function runQueued() {
 	worker.onmessage = workerMessage;
 	worker.postMessage(tilesetData);
 
-	var name = f.name;
 	gtag('event', 'cmv-started');
 
-	while (Object.hasOwnProperty.call(files, name)) {
-		name = name.replace(/\.cmv$/, '') + '_.cmv';
-	}
-
-	var div = document.createElement('div');
-	div.className = 'file';
-
-	var b = document.createElement('b');
-	b.innerText = name;
-	div.appendChild(b);
-
-	div.appendChild(document.createElement('br'));
-
-	var progress = document.createElement('progress');
-	progress.max = 1;
-	div.appendChild(progress);
-
-	var status = document.createElement('pre');
-	status.className = 'status';
-	status.innerText = 'preparing to convert...';
-	div.appendChild(status);
-
-	files[name] = {p: progress, s: status};
-
-	uploadFromUrl.parentNode.insertBefore(div, uploadFromUrl.nextSibling);
+	files[f[1]].s.innerText = 'initializing...';
 
 	myWorker.postMessage({
 		t: 'convert',
-		n: name,
-		d: f
+		n: f[1],
+		d: f[0]
 	});
 }
 
@@ -171,9 +182,7 @@ document.body.parentNode.addEventListener('drop', function(e) {
 		[].push.apply(queue, dt.files);
 	}
 
-	if (queue.length) {
-		runQueued();
-	}
+	runQueued();
 });
 
 document.body.parentNode.addEventListener('dragover', function(e) {

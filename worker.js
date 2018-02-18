@@ -596,16 +596,16 @@ function convert(name, blob) {
 
 			args.push('-filter_complex', afilter.join(''));
 
-			args.push('-map', '0:v', '-map', '[aout]', '-c:a', 'libfdk_aac', '-shortest');
+			args.push('-map', '0:v', '-map', '[aout]', '-c:a', 'aac', '-shortest');
 		}
 	}
 
 	args.push(
 		'-c:v', 'libx264',
-		'-crf', '18',
-		'-pix_fmt', 'yuv444p',
+		'-crf', '31',
+		'-pix_fmt', 'yuv420p',
 		'-movflags', '+faststart',
-		'-preset', 'ultrafast',
+		'-preset', 'fast',
 		'-y', mp4Name
 	);
 
