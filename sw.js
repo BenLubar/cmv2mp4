@@ -42,15 +42,15 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "ffmpeg-mp4.asm.js",
-    "revision": "b9d721d6359af4691506edb4e526b55e"
+    "revision": "79774afdb02b6471725ce110786ec209"
   },
   {
     "url": "ffmpeg-mp4.js",
-    "revision": "de684f3468bd4301c7560020dd6069f8"
+    "revision": "28d8756695bcf1451cc63121f9d47661"
   },
   {
     "url": "ffmpeg-mp4.js.mem",
-    "revision": "9f326e4ac48e14df63bfb558a2152314"
+    "revision": "71f4f12057caaaaef54d0b448cb68540"
   },
   {
     "url": "index.html",
@@ -74,11 +74,11 @@ workbox.precaching.precacheAndRoute([
   },
   {
     "url": "ui.js",
-    "revision": "1d63bee84176a2bcefd2b7a1cbd18e58"
+    "revision": "ec89b45dd430261645a576390741fc3f"
   },
   {
     "url": "worker.js",
-    "revision": "8729835913afe542b219dc7c545e8aac"
+    "revision": "91d41b54dc506ceca75ea0f551e50e61"
   },
   {
     "url": "/cmv2mp4",

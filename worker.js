@@ -73,11 +73,16 @@ self.onmessage = function(e) {
 		loaded();
 		break;
 	case 'convert':
-		convert(msg.n, msg.d);
+		convert(msg.n, msg.d, msg.a);
 		break;
 	default:
 		debugger;
 	}
+};
+
+self.onerror = function(message, source, lineno, colno, error) {
+	fail(error);
+	debugger;
 };
 
 var xhr = new XMLHttpRequest();
@@ -445,21 +450,22 @@ var MP4OutputDevice = {
 
 var lastStatus = 'starting encoder...';
 
-function convert(name, blob) {
+function convert(name, blob, audioArgs) {
 	CMVInputDevice.name = name;
-
-	var decoder;
-	try {
-		decoder = new Decoder(blob);
-		CMVInputDevice.decoder = decoder;
-	} catch (err) {
-		fail(err);
-		return;
-	}
-
 	var mp4Name = name.replace(/\.cmv$/, '') + '.mp4';
 
-	var allowedSounds = decoder.sounds.files.map(function(sound, i) {
+	var decoder;
+	if (!audioArgs) {
+		try {
+			decoder = new Decoder(blob);
+			CMVInputDevice.decoder = decoder;
+		} catch (err) {
+			fail(err);
+			return;
+		}
+	}
+
+	var allowedSounds = audioArgs ? audioArgs.f : decoder.sounds.files.map(function(sound, i) {
 		return [sound + '.ogg', i];
 	}).filter(function(sound) {
 		return soundWhitelist.indexOf(sound[0]) !== -1;
@@ -473,34 +479,93 @@ function convert(name, blob) {
 			FS.createDevice.major = 64;
 		}
 
-		var indev = FS.makedev(FS.createDevice.major++, 0);
-		FS.registerDevice(indev, CMVInputDevice.device);
-		FS.mkdev('/work/' + name, FS.getMode(true, false), indev);
+		if (audioArgs) {
+			var blobs = [{'name': mp4Name, 'data': blob}];
+			allowedSounds.map(function(sound) {
+				return sound[0];
+			}).filter(function(sound, i, a) {
+				return a.indexOf(sound) === i;
+			}).forEach(function(sound) {
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', sound, false);
+				xhr.responseType = 'blob';
+				xhr.send();
 
+				blobs.push({'name': sound, 'data': xhr.response});
+			});
+			FS.mount(WORKERFS, {'blobs': blobs}, '/work');
+		} else {
+			var indev = FS.makedev(FS.createDevice.major++, 0);
+			FS.registerDevice(indev, CMVInputDevice.device);
+			FS.mkdev('/work/' + name, FS.getMode(true, false), indev);
+		}
+
+		FS.mkdir('/out');
 		var outdev = FS.makedev(FS.createDevice.major++, 0);
 		FS.registerDevice(outdev, MP4OutputDevice.device);
-		FS.mkdev('/work/' + mp4Name, FS.getMode(true, true), outdev);
-
-		allowedSounds.map(function(sound) {
-			return sound[0];
-		}).filter(function(sound, i, a) {
-			return a.indexOf(sound) === i;
-		}).forEach(function(sound) {
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', sound, false);
-			xhr.responseType = 'arraybuffer';
-			xhr.send();
-
-			var data = new Uint8Array(xhr.response);
-			var fd = FS.open(sound, 'w');
-			FS.write(fd, data, 0, data.length);
-			FS.close(fd);
-		});
+		FS.mkdev('/out/' + mp4Name, FS.getMode(true, true), outdev);
 	});
 
 	Module['postRun'].push(function() {
 		if (fail()) {
 			return;
+		}
+
+		if (!audioArgs && allowedSounds.length) {
+			var audioTimestamps = [];
+			for (var i = 0; i < 200; i++) {
+				decoder.sounds.time[i].forEach(function(j) {
+					allowedSounds.filter(function(sound) {
+						return sound[1] === j;
+					}).forEach(function(sound) {
+						audioTimestamps.push([sound[0], i * decoder.delayrate / 100]);
+					});
+				});
+			}
+
+			if (audioTimestamps.length) {
+				var aargs = [];
+				var afilter = [];
+				audioTimestamps.forEach(function(sound, i) {
+					var ms = Math.round(sound[1] * 1000);
+					afilter.push('[', i + 1, ':a]');
+					if (ms) {
+						afilter.push('adelay=', ms, '|', ms, ',');
+					}
+					afilter.push('apad[a', i, '];');
+					aargs.push('-i', sound[0]);
+				});
+				for (var i = 0; i < audioTimestamps.length; i++) {
+					afilter.push('[a', i, ']');
+				}
+				afilter.push('amerge=inputs=', audioTimestamps.length, ',pan=stereo|c0=');
+				for (var i = 0; i < audioTimestamps.length; i++) {
+					afilter.push('c', i * 2, '+');
+				}
+				afilter.pop();
+				afilter.push('|c1=');
+				for (var i = 0; i < audioTimestamps.length; i++) {
+					afilter.push('c', i * 2 + 1, '+');
+				}
+				afilter.pop();
+				afilter.push('[aout]');
+
+				aargs.push('-filter_complex', afilter.join(''), '-map', '0:v', '-map', '[aout]', '-c:a', 'aac', '-shortest');
+
+				postMessage({
+					t: 'audio',
+					n: name,
+					m: mp4Name,
+					a: {a: aargs, f: allowedSounds},
+					d: new Blob([MP4OutputDevice.blob], {type: 'video/mp4'})
+				});
+
+				if (!noexit) {
+					close();
+				}
+
+				return;
+			}
 		}
 
 		postMessage({
@@ -515,18 +580,20 @@ function convert(name, blob) {
 		}
 	});
 
-	postMessage({
-		t: 'progress',
-		n: name,
-		f: 0,
-		s: lastStatus,
-		hs: decoder.headerSize,
-		co: 0,
-		cs: 1,
-		ls: 1,
-		fo: decoder.headerSize + 1,
-		fs: decoder.file.size
-	});
+	if (decoder) {
+		postMessage({
+			t: 'progress',
+			n: name,
+			f: 0,
+			s: lastStatus,
+			hs: decoder.headerSize,
+			co: 0,
+			cs: 1,
+			ls: 1,
+			fo: decoder.headerSize + 1,
+			fs: decoder.file.size
+		});
+	}
 
 	var logBuffer = [];
 
@@ -536,78 +603,54 @@ function convert(name, blob) {
 				logBuffer.pop();
 			}
 			if (logBuffer.length) {
-				console.log('[' + name + '] ' + String.fromCharCode.apply(String, logBuffer));
+				var message = '[' + name + '] ' + String.fromCharCode.apply(String, logBuffer);
+				if (typeof console !== 'undefined') {
+					console.log(message);
+				}
 				logBuffer.splice(0, logBuffer.length);
 			}
 			return;
 		}
 		if (logBuffer[logBuffer.length - 1] === '\r'.charCodeAt(0)) {
 			lastStatus = String.fromCharCode.apply(String, logBuffer);
+			if (audioArgs) {
+				postMessage({
+					t: 'progress',
+					n: name,
+					f: 0,
+					s: '(adding audio) ' + lastStatus,
+					hs: 0,
+					co: 0,
+					cs: 1,
+					ls: 1,
+					fo: -1,
+					fs: 1
+				});
+			}
 			logBuffer.splice(0, logBuffer.length);
 		}
 		logBuffer.push(c);
 	};
 
-	var args = [
+	var args = audioArgs ? [
+		'-i', mp4Name
+	].concat(audioArgs.a, [
+		'-c:v', 'copy',
+		'-movflags', '+faststart',
+		'-y', '/out/' + mp4Name
+	]) : [
 		'-r', '100/' + (decoder.delayrate || 2),
 		'-s', (decoder.columns * tileset.width) + 'x' + (decoder.rows * tileset.height),
 		'-f', 'rawvideo',
 		'-pix_fmt', 'rgb24',
-		'-i', name
-	];
-
-	if (allowedSounds.length) {
-		var audioTimestamps = [];
-		for (var i = 0; i < 200; i++) {
-			decoder.sounds.time[i].forEach(function(j) {
-				allowedSounds.filter(function(sound) {
-					return sound[1] === j;
-				}).forEach(function(sound) {
-					audioTimestamps.push([sound[0], i * decoder.delayrate / 100]);
-				});
-			});
-		}
-
-		if (audioTimestamps.length) {
-			var afilter = [];
-			audioTimestamps.forEach(function(sound, i) {
-				var ms = Math.round(sound[1] * 1000);
-				afilter.push('[', i + 1, ':a]');
-				if (ms) {
-					afilter.push('adelay=', ms, '|', ms, ',');
-				}
-				afilter.push('apad[a', i, '];');
-				args.push('-i', sound[0]);
-			});
-			for (var i = 0; i < audioTimestamps.length; i++) {
-				afilter.push('[a', i, ']');
-			}
-			afilter.push('amerge=inputs=', audioTimestamps.length, ',pan=stereo|c0=');
-			for (var i = 0; i < audioTimestamps.length; i++) {
-				afilter.push('c', i * 2, '+');
-			}
-			afilter.pop();
-			afilter.push('|c1=');
-			for (var i = 0; i < audioTimestamps.length; i++) {
-				afilter.push('c', i * 2 + 1, '+');
-			}
-			afilter.pop();
-			afilter.push('[aout]');
-
-			args.push('-filter_complex', afilter.join(''));
-
-			args.push('-map', '0:v', '-map', '[aout]', '-c:a', 'aac', '-shortest');
-		}
-	}
-
-	args.push(
+		'-i', name,
 		'-c:v', 'libx264',
 		'-crf', '31',
 		'-pix_fmt', 'yuv420p',
 		'-movflags', '+faststart',
 		'-preset', 'fast',
-		'-y', mp4Name
-	);
+		'-y', '/out/' + mp4Name
+	];
 
 	Module['run'](args);
 }

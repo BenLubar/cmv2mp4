@@ -51,6 +51,19 @@ function workerMessage(e) {
 		running--;
 		runQueued();
 		break;
+	case 'audio':
+		gtag('event', 'cmv-audio');
+		files[msg.n].p.value = -1;
+		files[msg.n].s.innerText = 'preparing to add audio...';
+		running--;
+		queue2.push({
+			t: 'convert',
+			n: msg.n,
+			d: msg.d,
+			a: msg.a
+		});
+		runQueued();
+		break;
 	case 'mp4':
 		gtag('event', 'cmv-finished');
 		var a = document.createElement('a');
@@ -123,7 +136,11 @@ function runQueued() {
 
 		uploadFromUrl.parentNode.insertBefore(div, uploadFromUrl.nextSibling);
 
-		queue2.push([f, name]);
+		queue2.push({
+			t: 'convert',
+			n: name,
+			d: f
+		});
 	}
 
 	if (!queue2.length || !workerReady || concurrency.value <= running) {
@@ -140,15 +157,11 @@ function runQueued() {
 	worker.onmessage = workerMessage;
 	worker.postMessage(tilesetData);
 
-	gtag('event', 'cmv-started');
+	gtag('event', f.a ? 'cmv-audio-started' : 'cmv-started');
 
-	files[f[1]].s.innerText = 'initializing...';
+	files[f.n].s.innerText = f.a ? 'preparing to process audio...' : 'initializing...';
 
-	myWorker.postMessage({
-		t: 'convert',
-		n: f[1],
-		d: f[0]
-	});
+	myWorker.postMessage(f);
 }
 
 file.addEventListener('change', function() {
