@@ -645,10 +645,11 @@ function convert(name, blob, audioArgs) {
 		'-pix_fmt', 'rgb24',
 		'-i', name,
 		'-c:v', 'libx264',
-		'-crf', '31',
+		'-crf', '25',
 		'-pix_fmt', 'yuv420p',
 		'-movflags', '+faststart',
 		'-preset', 'fast',
+		'-r', '50',
 		'-y', '/out/' + mp4Name
 	];
 
